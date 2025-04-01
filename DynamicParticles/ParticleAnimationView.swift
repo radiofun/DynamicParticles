@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct ParticleAnimation: View {
     
@@ -17,77 +16,68 @@ struct ParticleAnimation: View {
     @State private var state: ParticleState = .idle
     @State private var dragPosition: CGPoint?
     @State private var dragVelocity: CGSize?
-    @State private var text: String = "circle.fill"
-    
+
     let timer = Timer.publish(every: 1/120, on: .main, in: .common).autoconnect()
     
     var body: some View {
         
         Canvas { context, size in
-            context.blendMode = .normal
-            let mutedColors: [Color] = [
-                Color(red: 0.2, green: 0.7, blue: 0.6),
-                Color(red: 1.0, green: 0.8, blue: 0.6),
-                Color(red: 0.6, green: 1.0, blue: 0.8),
-                Color(red: 0.8, green: 0.6, blue: 0.7),
-                Color(red: 0.6, green: 0.8, blue: 0.7)
-            ]
-
-            for (index, particle) in particles.enumerated() {
-                let path = Path(ellipseIn: CGRect(x: particle.x, y: particle.y, width: 3, height: 3))
-                let color = mutedColors[index % mutedColors.count].opacity(1.0)
-                context.fill(path, with: .color(color))
-            }
+            renderCanvas(&context)
         }
         .onReceive(timer) { _ in
             updateParticles()
         }
-        .onChange(of: text) {
+        .onChange(of: state, initial: true) {
             createParticles()
         }
-        .onAppear {
-            createParticles()
-        }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    dragPosition = value.location
-                    dragVelocity = value.velocity
-                    triggerHapticFeedback()
-                }
-            
-                .onEnded { value in
-                    dragPosition = nil
-                    dragVelocity = nil
-                    updateParticles()
-                }
-        )
+        .gesture(gesture)
         .background(.background)
-        .overlay(
-            GeometryReader { geometry in
-                Color.clear
-                    .onAppear {
-                        size = geometry.size
-                        text = "circle.fill"
-                        createParticles()
-                    }
-            }
-        )
-        
-        Picker("State", selection: $state) {
-            ForEach(ParticleState.allCases, id: \.self) { state in
-                Text(state.rawValue).tag(state)
-            }
+        .onGeometryChange(for: CGSize.self) { geometry in
+            geometry.size
+        } action: { newValue in
+            size = newValue
         }
-        .pickerStyle(SegmentedPickerStyle())
-        .padding()
+        
+        PickerView(selectedState: $state)
+          .padding()
         
     }
-    
+
+    private func renderCanvas(_ context: inout GraphicsContext) {
+        context.blendMode = .normal
+        let mutedColors: [Color] = [
+            Color(red: 0.2, green: 0.7, blue: 0.6),
+            Color(red: 1.0, green: 0.8, blue: 0.6),
+            Color(red: 0.6, green: 1.0, blue: 0.8),
+            Color(red: 0.8, green: 0.6, blue: 0.7),
+            Color(red: 0.6, green: 0.8, blue: 0.7)
+        ]
+
+        for (index, particle) in particles.enumerated() {
+            let path = Path(ellipseIn: CGRect(x: particle.x, y: particle.y, width: 3, height: 3))
+            let color = mutedColors[index % mutedColors.count].opacity(1.0)
+            context.fill(path, with: .color(color))
+        }
+    }
+
+    private var gesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                dragPosition = value.location
+                dragVelocity = value.velocity
+                triggerHapticFeedback()
+            }
+            .onEnded { value in
+                dragPosition = nil
+                dragVelocity = nil
+                updateParticles()
+            }
+    }
+
     private func createParticles() {
         let renderer = ImageRenderer(content:
                                         Image(systemName
-                                              : text)
+                                              : state.text)
             .resizable()
             .scaledToFit()
             .frame(width: 360, height: 360)
@@ -124,43 +114,15 @@ struct ParticleAnimation: View {
     }
     
     private func updateParticles() {
-
-        withAnimation(.linear(duration: 0.5)) {
-            switch state {
-            case .idle:
-                for i in particles.indices {
-                    text = "circle.fill"
-                    particles[i].update(state: .idle, dragPosition: dragPosition, dragVelocity: dragVelocity)
-                }
-            case .listening:
-                for i in particles.indices {
-                    withAnimation(.spring()){
-                        text = "circle.fill"
-
-                        particles[i].update(state: .listening, dragPosition: dragPosition, dragVelocity: dragVelocity)
-
-                    }
-
-                }
-            case .speaking:
-                for i in particles.indices {
-                    text = "circle.fill"
-
-                    particles[i].update(state: .speaking, dragPosition: dragPosition, dragVelocity: dragVelocity)
-                }
-            case .question:
-                for i in particles.indices {
-                    text = "questionmark"
-
-                    particles[i].update(state: .idle, dragPosition: dragPosition, dragVelocity: dragVelocity)
-                }
-
+        withAnimation(state.animation) {
+            for i in particles.indices {
+                particles[i].update(state: state,
+                                    dragPosition: dragPosition,
+                                    dragVelocity: dragVelocity)
             }
         }
     }
 }
-
-
 
 func triggerHapticFeedback() {
     let impact = UIImpactFeedbackGenerator(style: .light)
