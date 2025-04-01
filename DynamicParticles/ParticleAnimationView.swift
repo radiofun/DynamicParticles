@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct ParticleAnimation: View {
     
@@ -24,66 +23,64 @@ struct ParticleAnimation: View {
     var body: some View {
         
         Canvas { context, size in
-            context.blendMode = .normal
-            let mutedColors: [Color] = [
-                Color(red: 0.2, green: 0.7, blue: 0.6),
-                Color(red: 1.0, green: 0.8, blue: 0.6),
-                Color(red: 0.6, green: 1.0, blue: 0.8),
-                Color(red: 0.8, green: 0.6, blue: 0.7),
-                Color(red: 0.6, green: 0.8, blue: 0.7)
-            ]
-
-            for (index, particle) in particles.enumerated() {
-                let path = Path(ellipseIn: CGRect(x: particle.x, y: particle.y, width: 3, height: 3))
-                let color = mutedColors[index % mutedColors.count].opacity(1.0)
-                context.fill(path, with: .color(color))
-            }
+            renderCanvas(&context)
         }
         .onReceive(timer) { _ in
             updateParticles()
         }
-        .onChange(of: text) {
+        .onChange(of: text, initial: true) {
             createParticles()
         }
-        .onAppear {
-            createParticles()
-        }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    dragPosition = value.location
-                    dragVelocity = value.velocity
-                    triggerHapticFeedback()
-                }
-            
-                .onEnded { value in
-                    dragPosition = nil
-                    dragVelocity = nil
-                    updateParticles()
-                }
-        )
+        .gesture(gesture)
         .background(.background)
-        .overlay(
-            GeometryReader { geometry in
-                Color.clear
-                    .onAppear {
-                        size = geometry.size
-                        text = "circle.fill"
-                        createParticles()
-                    }
-            }
-        )
+        .onGeometryChange(for: CGSize.self) { geometry in
+            geometry.size
+        } action: { newValue in
+            size = newValue
+            text = "circle.fill"
+        }
         
         Picker("State", selection: $state) {
-            ForEach(ParticleState.allCases, id: \.self) { state in
+            ForEach(ParticleState.allCases) { state in
                 Text(state.rawValue).tag(state)
             }
         }
-        .pickerStyle(SegmentedPickerStyle())
+        .pickerStyle(.segmented)
         .padding()
         
     }
-    
+
+    private func renderCanvas(_ context: inout GraphicsContext) {
+        context.blendMode = .normal
+        let mutedColors: [Color] = [
+            Color(red: 0.2, green: 0.7, blue: 0.6),
+            Color(red: 1.0, green: 0.8, blue: 0.6),
+            Color(red: 0.6, green: 1.0, blue: 0.8),
+            Color(red: 0.8, green: 0.6, blue: 0.7),
+            Color(red: 0.6, green: 0.8, blue: 0.7)
+        ]
+
+        for (index, particle) in particles.enumerated() {
+            let path = Path(ellipseIn: CGRect(x: particle.x, y: particle.y, width: 3, height: 3))
+            let color = mutedColors[index % mutedColors.count].opacity(1.0)
+            context.fill(path, with: .color(color))
+        }
+    }
+
+    private var gesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                dragPosition = value.location
+                dragVelocity = value.velocity
+                triggerHapticFeedback()
+            }
+            .onEnded { value in
+                dragPosition = nil
+                dragVelocity = nil
+                updateParticles()
+            }
+    }
+
     private func createParticles() {
         let renderer = ImageRenderer(content:
                                         Image(systemName
@@ -159,8 +156,6 @@ struct ParticleAnimation: View {
         }
     }
 }
-
-
 
 func triggerHapticFeedback() {
     let impact = UIImpactFeedbackGenerator(style: .light)

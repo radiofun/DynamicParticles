@@ -8,11 +8,15 @@
 import SwiftUI
 
 
-enum ParticleState : String, CaseIterable {
+enum ParticleState : String, CaseIterable, Identifiable {
     case idle
     case listening
     case speaking
     case question
+
+    var id: String {
+        self.rawValue
+    }
 }
 
 
