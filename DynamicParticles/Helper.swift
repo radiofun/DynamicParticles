@@ -17,6 +17,24 @@ enum ParticleState : String, CaseIterable, Identifiable {
     var id: String {
         self.rawValue
     }
+
+    var text: String {
+        switch self {
+        case .idle, .listening, .speaking:
+            return "circle.fill"
+        case .question:
+            return "questionmark"
+        }
+    }
+
+    var animation: Animation {
+        switch self {
+        case .listening:
+            .spring()
+        default:
+            .linear(duration: 0.5)
+        }
+    }
 }
 
 
@@ -46,7 +64,6 @@ struct Particle {
         case .question:
             circulate()
         }
-
 
         if let dragPosition = dragPosition {
             applyDragEffect(dragPosition: dragPosition, dragVelocity: dragVelocity)

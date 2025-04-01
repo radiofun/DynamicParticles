@@ -16,8 +16,7 @@ struct ParticleAnimation: View {
     @State private var state: ParticleState = .idle
     @State private var dragPosition: CGPoint?
     @State private var dragVelocity: CGSize?
-    @State private var text: String = "circle.fill"
-    
+
     let timer = Timer.publish(every: 1/120, on: .main, in: .common).autoconnect()
     
     var body: some View {
@@ -28,7 +27,7 @@ struct ParticleAnimation: View {
         .onReceive(timer) { _ in
             updateParticles()
         }
-        .onChange(of: text, initial: true) {
+        .onChange(of: state, initial: true) {
             createParticles()
         }
         .gesture(gesture)
@@ -37,7 +36,6 @@ struct ParticleAnimation: View {
             geometry.size
         } action: { newValue in
             size = newValue
-            text = "circle.fill"
         }
         
         Picker("State", selection: $state) {
@@ -84,7 +82,7 @@ struct ParticleAnimation: View {
     private func createParticles() {
         let renderer = ImageRenderer(content:
                                         Image(systemName
-                                              : text)
+                                              : state.text)
             .resizable()
             .scaledToFit()
             .frame(width: 360, height: 360)
@@ -121,37 +119,11 @@ struct ParticleAnimation: View {
     }
     
     private func updateParticles() {
-
-        withAnimation(.linear(duration: 0.5)) {
-            switch state {
-            case .idle:
-                for i in particles.indices {
-                    text = "circle.fill"
-                    particles[i].update(state: .idle, dragPosition: dragPosition, dragVelocity: dragVelocity)
-                }
-            case .listening:
-                for i in particles.indices {
-                    withAnimation(.spring()){
-                        text = "circle.fill"
-
-                        particles[i].update(state: .listening, dragPosition: dragPosition, dragVelocity: dragVelocity)
-
-                    }
-
-                }
-            case .speaking:
-                for i in particles.indices {
-                    text = "circle.fill"
-
-                    particles[i].update(state: .speaking, dragPosition: dragPosition, dragVelocity: dragVelocity)
-                }
-            case .question:
-                for i in particles.indices {
-                    text = "questionmark"
-
-                    particles[i].update(state: .idle, dragPosition: dragPosition, dragVelocity: dragVelocity)
-                }
-
+        withAnimation(state.animation) {
+            for i in particles.indices {
+                particles[i].update(state: state,
+                                    dragPosition: dragPosition,
+                                    dragVelocity: dragVelocity)
             }
         }
     }
