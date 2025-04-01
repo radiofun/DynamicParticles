@@ -38,13 +38,8 @@ struct ParticleAnimation: View {
             size = newValue
         }
         
-        Picker("State", selection: $state) {
-            ForEach(ParticleState.allCases) { state in
-                Text(state.rawValue).tag(state)
-            }
-        }
-        .pickerStyle(.segmented)
-        .padding()
+        PickerView(selectedState: $state)
+          .padding()
         
     }
 
